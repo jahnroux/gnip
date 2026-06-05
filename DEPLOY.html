@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>gnip — Deployment Guide</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: #0e1116; color: #d8dee9;
+      font: 15px/1.6 system-ui, "Segoe UI", Roboto, sans-serif;
+    }
+    header.top {
+      position: sticky; top: 0; z-index: 5;
+      display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap;
+      padding: 14px 24px; background: #11151cee; backdrop-filter: blur(6px);
+      border-bottom: 1px solid #1e2530;
+    }
+    header.top h1 { font-size: 18px; margin: 0; font-weight: 600; letter-spacing: .3px; }
+    header.top h1 .g { color: #4fc3f7; }
+    header.top .sub { color: #6b7686; font-size: 13px; }
+    header.top nav { margin-left: auto; display: flex; gap: 14px; flex-wrap: wrap; }
+    header.top nav a { color: #9aa4b2; text-decoration: none; font-size: 13px; }
+    header.top nav a:hover { color: #4fc3f7; }
+    main { max-width: 920px; margin: 0 auto; padding: 28px 24px 80px; }
+    h2 { font-size: 22px; margin: 40px 0 6px; padding-bottom: 6px; border-bottom: 1px solid #1e2530; }
+    h2:first-of-type { margin-top: 8px; }
+    h3 { font-size: 16px; margin: 26px 0 8px; color: #cdd6e0; }
+    p { margin: 10px 0; }
+    a { color: #4fc3f7; }
+    code { background: #0b0e13; border: 1px solid #1b2230; border-radius: 4px; padding: 1px 5px; font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: .88em; }
+    .muted { color: #8b94a3; }
+    ol, ul { padding-left: 22px; }
+    li { margin: 6px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 14px 0; font-size: 14px; }
+    th, td { border: 1px solid #1e2530; padding: 7px 10px; text-align: left; vertical-align: top; }
+    th { background: #141a23; color: #9aa4b2; font-weight: 600; }
+    td code { font-size: .9em; }
+    /* code blocks */
+    .code { position: relative; margin: 14px 0; background: #0b0e13; border: 1px solid #1b2230; border-radius: 8px; }
+    .code .bar { display: flex; align-items: center; justify-content: space-between; padding: 6px 10px; border-bottom: 1px solid #161d27; }
+    .code .lang { font-size: 11px; letter-spacing: .5px; text-transform: uppercase; color: #6b7686; }
+    .code .copy { background: #1a212c; color: #c8d0da; border: 1px solid #283143; border-radius: 4px; padding: 2px 10px; font: inherit; font-size: 12px; cursor: pointer; }
+    .code .copy:hover { background: #222b38; }
+    .code .copy.ok { background: #1f6feb; border-color: #1f6feb; color: #fff; }
+    .code pre { margin: 0; padding: 12px 14px; overflow-x: auto; }
+    .code pre code { background: none; border: none; padding: 0; font-size: 13px; line-height: 1.55; color: #d8dee9; }
+    /* callouts */
+    .note { border-left: 3px solid; border-radius: 0 6px 6px 0; padding: 10px 14px; margin: 16px 0; background: #11151c; }
+    .note.info { border-color: #4fc3f7; }
+    .note.warn { border-color: #ffa726; }
+    .note.danger { border-color: #ef5350; }
+    .note strong { color: #e6edf3; }
+    footer { max-width: 920px; margin: 0 auto; padding: 0 24px 60px; color: #6b7686; font-size: 13px; border-top: 1px solid #1e2530; padding-top: 18px; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <h1><span class="g">gnip</span> — Deployment Guide</h1>
+    <span class="sub">stand it up locally &amp; deploy to a Linux server</span>
+    <nav>
+      <a href="#local">Local (Windows)</a>
+      <a href="#linux">Linux server</a>
+      <a href="#hardening">Hardening</a>
+      <a href="#updating">Updating</a>
+    </nav>
+  </header>
+
+  <main>
+    <p>Two paths: stand gnip up <strong>locally on Windows</strong>, and deploy it to a
+    <strong>Linux server</strong> as a systemd service. gnip is a single self-contained binary —
+    no .NET install needed on the target.</p>
+
+    <h2 id="local">1. Local (Windows)</h2>
+
+    <h3>Run from source (development)</h3>
+    <div class="code" data-lang="powershell">
+      <div class="bar"><span class="lang">powershell</span><button class="copy">Copy</button></div>
+      <pre><code>dotnet run -c Release --urls http://localhost:5099</code></pre>
+    </div>
+    <p>Open <a href="http://localhost:5099">http://localhost:5099</a>. Change the
+    target / interval / window / threshold live from the ⚙ Settings panel.</p>
+
+    <h3>Run a portable build (no SDK needed)</h3>
+    <div class="code" data-lang="powershell">
+      <div class="bar"><span class="lang">powershell</span><button class="copy">Copy</button></div>
+      <pre><code>.\publish.ps1                       # -&gt; bin\publish\win-x64\
+.\bin\publish\win-x64\gnip.exe --urls http://localhost:5099</code></pre>
+    </div>
+    <p><code>bin\publish\win-x64\</code> holds <code>gnip.exe</code> + <code>wwwroot\</code> +
+    <code>appsettings.json</code>. Copy that folder anywhere and run it. Data files
+    (<code>gnip.db</code>, <code>gnip.settings.json</code>) are created next to the exe. To install
+    it as a Windows Service, see <a href="README.md">README.md</a>.</p>
+
+    <h2 id="linux">2. Linux server</h2>
+    <p class="muted">Targets glibc distros (Ubuntu / Debian / RHEL / etc.) via the
+    <code>linux-x64</code> runtime. For Alpine/musl, publish <code>linux-musl-x64</code> instead.</p>
+
+    <h3>Step 1 — Build the Linux binary</h3>
+    <p>On your Windows dev box (cross-publish works fine):</p>
+    <div class="code" data-lang="powershell">
+      <div class="bar"><span class="lang">powershell</span><button class="copy">Copy</button></div>
+      <pre><code>.\publish.ps1 -Runtime linux-x64    # -&gt; bin\publish\linux-x64\  (gnip, wwwroot\, appsettings.json)</code></pre>
+    </div>
+    <p class="muted">Or, if the server has the .NET 8 SDK, build there:</p>
+    <div class="code" data-lang="bash">
+      <div class="bar"><span class="lang">bash</span><button class="copy">Copy</button></div>
+      <pre><code>dotnet publish -c Release -r linux-x64 --self-contained \
+  -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o out</code></pre>
+    </div>
+
+    <h3>Step 2 — Copy it to the server</h3>
+    <div class="code" data-lang="bash">
+      <div class="bar"><span class="lang">bash</span><button class="copy">Copy</button></div>
+      <pre><code># from the dev box
+scp -r bin/publish/linux-x64/* user@server:/tmp/gnip/
+# on the server
+sudo mkdir -p /opt/gnip &amp;&amp; sudo cp -r /tmp/gnip/* /opt/gnip/
+sudo chmod +x /opt/gnip/gnip</code></pre>
+    </div>
+
+    <h3>Step 3 — Service user + writable data dir</h3>
+    <div class="code" data-lang="bash">
+      <div class="bar"><span class="lang">bash</span><button class="copy">Copy</button></div>
+      <pre><code>sudo useradd --system --no-create-home --shell /usr/sbin/nologin gnip
+sudo mkdir -p /var/lib/gnip
+sudo chown -R gnip:gnip /var/lib/gnip /opt/gnip</code></pre>
+    </div>
+
+    <h3>Step 4 — ICMP permission <span class="muted">(the important bit)</span></h3>
+    <div class="note info">
+      On Linux, .NET's ping needs the raw-socket capability or it can't send ICMP. Pick one
+      (simplest first):
+      <ul>
+        <li><strong>Recommended</strong> — grant it to the service in the unit below:
+          <code>AmbientCapabilities=CAP_NET_RAW</code>.</li>
+        <li>Or grant it to the binary directly: <code>sudo setcap cap_net_raw+ep /opt/gnip/gnip</code></li>
+        <li>Or rely on the <code>ping</code> fallback: <code>sudo apt install iputils-ping</code>
+          (works, but slower and less precise).</li>
+      </ul>
+      Without one of these, every probe logs an error / shows as loss.
+    </div>
+
+    <h3>Step 5 — systemd unit</h3>
+    <p>Create <code>/etc/systemd/system/gnip.service</code>:</p>
+    <div class="code" data-lang="ini">
+      <div class="bar"><span class="lang">ini</span><button class="copy">Copy</button></div>
+      <pre><code>[Unit]
+Description=gnip latency monitor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+User=gnip
+Group=gnip
+WorkingDirectory=/opt/gnip
+ExecStart=/opt/gnip/gnip --urls http://0.0.0.0:5099 --Gnip:DbPath=/var/lib/gnip/gnip.db
+Environment=DOTNET_ENVIRONMENT=Production
+AmbientCapabilities=CAP_NET_RAW
+CapabilityBoundingSet=CAP_NET_RAW
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+    </div>
+    <div class="code" data-lang="bash">
+      <div class="bar"><span class="lang">bash</span><button class="copy">Copy</button></div>
+      <pre><code>sudo systemctl daemon-reload
+sudo systemctl enable --now gnip
+systemctl status gnip
+journalctl -u gnip -f          # you should see "8.8.8.8 rtt=NNms" lines</code></pre>
+    </div>
+    <p><code>Type=notify</code> works because the app calls <code>UseSystemd()</code>; logs go to the
+    journal. The absolute <code>--Gnip:DbPath</code> keeps data in the writable
+    <code>/var/lib/gnip</code> (the install dir may be read-only), and <code>gnip.settings.json</code>
+    is written there too.</p>
+
+    <h3>Step 6 — Firewall</h3>
+    <div class="code" data-lang="bash">
+      <div class="bar"><span class="lang">bash</span><button class="copy">Copy</button></div>
+      <pre><code>sudo ufw allow 5099/tcp</code></pre>
+    </div>
+    <p>Then browse to <code>http://&lt;server-ip&gt;:5099</code>.</p>
+
+    <h2 id="hardening">Production hardening <span class="muted">(recommended)</span></h2>
+    <div class="note danger">
+      gnip has <strong>no built-in authentication</strong>. To expose it safely, bind it to
+      localhost and front it with a reverse proxy that adds TLS + auth.
+    </div>
+    <ol>
+      <li>In the unit, change <code>--urls http://0.0.0.0:5099</code> to
+        <code>--urls http://127.0.0.1:5099</code>.</li>
+      <li>Example nginx site (note the SSE-friendly settings — without them the live graph stalls):</li>
+    </ol>
+    <div class="code" data-lang="nginx">
+      <div class="bar"><span class="lang">nginx</span><button class="copy">Copy</button></div>
+      <pre><code>server {
+    listen 80;                       # add TLS via certbot / your CA
+    server_name gnip.example.com;
+    location / {
+        proxy_pass http://127.0.0.1:5099;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_buffering off;         # required: /api/live is a Server-Sent Events stream
+        proxy_read_timeout 1h;
+    }
+}</code></pre>
+    </div>
+    <div class="note warn">
+      gnip already sends <code>X-Accel-Buffering: no</code> on the live stream, so nginx won't
+      buffer it. Add HTTP basic auth (<code>auth_basic</code>) or your SSO at the proxy.
+    </div>
+
+    <h2 id="updating">Updating</h2>
+    <p>Re-publish, copy the new files over, and restart:</p>
+    <div class="code" data-lang="bash">
+      <div class="bar"><span class="lang">bash</span><button class="copy">Copy</button></div>
+      <pre><code>sudo systemctl stop gnip
+sudo cp -r /tmp/gnip/* /opt/gnip/ &amp;&amp; sudo chmod +x /opt/gnip/gnip
+sudo systemctl start gnip</code></pre>
+    </div>
+    <p>Your data (<code>/var/lib/gnip/gnip.db</code>) and runtime settings
+    (<code>gnip.settings.json</code>) are untouched.</p>
+  </main>
+
+  <footer>
+    Companion to <a href="DEPLOY.md">DEPLOY.md</a> · part of the
+    <a href="README.md">gnip</a> project. Open this file in any browser, or drop it in
+    <code>wwwroot/</code> to serve it from a running instance.
+  </footer>
+
+  <script>
+    document.querySelectorAll(".code").forEach(function (block) {
+      var btn = block.querySelector(".copy");
+      var code = block.querySelector("code");
+      btn.addEventListener("click", function () {
+        var ta = document.createElement("textarea");
+        ta.value = code.innerText;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        var ok = false;
+        try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+        if (!ok && navigator.clipboard) { navigator.clipboard.writeText(code.innerText); ok = true; }
+        document.body.removeChild(ta);
+        btn.textContent = ok ? "Copied" : "Copy failed";
+        btn.classList.toggle("ok", ok);
+        setTimeout(function () { btn.textContent = "Copy"; btn.classList.remove("ok"); }, 1200);
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# Build output
+bin/
+obj/
+
+# SQLite data + WAL sidecars
+*.db
+*.db-wal
+*.db-shm
+
+# Logs
+*.log
+
+# Runtime settings (environment-specific; created at runtime)
+gnip.settings.json
+
+# IDE
+.vs/
+.idea/
+*.user
+
+# Claude Code local settings (machine-specific permissions/paths)
+.claude/
