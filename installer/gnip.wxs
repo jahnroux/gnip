@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  WiX 5 installer for gnip. Build (after .\publish.ps1) with .\build-msi.ps1, or:
+    wix build installer\gnip.wxs -arch x64 -ext WixToolset.Util.wixext `
+        -d PublishDir=<abs path to bin\publish\win-x64> -o bin\gnip.msi
+  Installs the service + tray to Program Files, registers the auto-start service with
+  crash-recovery, keeps data in C:\ProgramData\gnip, and adds Start Menu shortcuts.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+
+  <Package Name="gnip"
+           Manufacturer="gnip"
+           Version="1.0.0.0"
+           UpgradeCode="7E3B6A2C-1F4D-4C9E-9B2A-2D6F8C1A4E55"
+           Scope="perMachine"
+           Compressed="yes">
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of gnip is already installed." />
+    <MediaTemplate EmbedCab="yes" />
+
+    <!-- C:\Program Files\gnip  (with a wwwroot subfolder) -->
+    <StandardDirectory Id="ProgramFiles64Folder">
+      <Directory Id="INSTALLFOLDER" Name="gnip">
+        <Directory Id="WwwRootDir" Name="wwwroot" />
+      </Directory>
+    </StandardDirectory>
+    <!-- C:\ProgramData\gnip  (writable data) -->
+    <StandardDirectory Id="CommonAppDataFolder">
+      <Directory Id="DATAFOLDER" Name="gnip" />
+    </StandardDirectory>
+    <!-- Start Menu\Programs\gnip -->
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="MenuFolder" Name="gnip" />
+    </StandardDirectory>
+
+    <Feature Id="Main" Title="gnip" Level="1">
+      <ComponentRef Id="ServiceComponent" />
+      <ComponentRef Id="TrayComponent" />
+      <ComponentRef Id="ConfigComponent" />
+      <ComponentGroupRef Id="WwwFiles" />
+      <ComponentRef Id="DataFolder" />
+      <ComponentRef Id="Shortcuts" />
+    </Feature>
+
+    <!-- Service host + Windows service registration (auto-start, crash-recovery). -->
+    <Component Id="ServiceComponent" Directory="INSTALLFOLDER" Bitness="always64">
+      <File Id="gnip.exe" Source="$(var.PublishDir)\gnip.exe" KeyPath="yes" />
+      <ServiceInstall Id="GnipService"
+                      Name="gnip"
+                      DisplayName="gnip latency monitor"
+                      Description="gnip - PingPlotter-style latency/loss monitor"
+                      Type="ownProcess"
+                      Start="auto"
+                      ErrorControl="normal"
+                      Account="LocalSystem"
+                      Arguments="--urls http://localhost:5099 --Gnip:DbPath=&quot;[DATAFOLDER]gnip.db&quot;"
+                      Vital="yes">
+        <util:ServiceConfig FirstFailureActionType="restart"
+                            SecondFailureActionType="restart"
+                            ThirdFailureActionType="restart"
+                            RestartServiceDelayInSeconds="5"
+                            ResetPeriodInDays="1" />
+      </ServiceInstall>
+      <ServiceControl Id="GnipServiceControl"
+                      Name="gnip"
+                      Start="install"
+                      Stop="both"
+                      Remove="uninstall"
+                      Wait="yes" />
+    </Component>
+
+    <!-- Tray controller. -->
+    <Component Id="TrayComponent" Directory="INSTALLFOLDER" Bitness="always64">
+      <File Id="GnipTray.exe" Source="$(var.PublishDir)\GnipTray.exe" KeyPath="yes" />
+    </Component>
+
+    <!-- Default settings (runtime changes persist to gnip.settings.json in the data dir). -->
+    <Component Id="ConfigComponent" Directory="INSTALLFOLDER" Bitness="always64">
+      <File Id="appsettings.json" Source="$(var.PublishDir)\appsettings.json" KeyPath="yes" />
+    </Component>
+
+    <!-- Web UI assets (harvested, so adding files needs no edits here). -->
+    <ComponentGroup Id="WwwFiles" Directory="WwwRootDir">
+      <Files Include="$(var.PublishDir)\wwwroot\**" />
+    </ComponentGroup>
+
+    <!-- Create the data folder; data itself is left in place on uninstall. -->
+    <Component Id="DataFolder" Directory="DATAFOLDER" Guid="A1B2C3D4-0001-4000-8000-000000000001">
+      <CreateFolder />
+      <RegistryValue Root="HKLM" Key="Software\gnip" Name="DataDir" Type="string" Value="[DATAFOLDER]" KeyPath="yes" />
+    </Component>
+
+    <!-- Start Menu shortcuts: launch the tray, open the dashboard. -->
+    <Component Id="Shortcuts" Directory="MenuFolder" Guid="A1B2C3D4-0002-4000-8000-000000000002">
+      <Shortcut Id="TrayShortcut"
+                Name="gnip Tray"
+                Description="Control the gnip service from the system tray"
+                Target="[INSTALLFOLDER]GnipTray.exe"
+                WorkingDirectory="INSTALLFOLDER" />
+      <util:InternetShortcut Id="DashboardShortcut"
+                             Name="gnip Dashboard"
+                             Target="http://localhost:5099" />
+      <RemoveFolder Id="RemoveMenuFolder" On="uninstall" />
+      <RegistryValue Root="HKLM" Key="Software\gnip" Name="Shortcuts" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+  </Package>
+</Wix>

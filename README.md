@@ -77,6 +77,20 @@ grey = stopped, amber = changing, red = not installed. Right-click for **Open da
 **Open data folder**, **View logs** (Event Viewer), and a **Start tray at login** toggle.
 Double-click the icon to open the dashboard.
 
+### MSI installer
+
+Prefer a double-click installer? Build `gnip.msi` (needs the free WiX 5 toolset):
+
+```powershell
+dotnet tool install --global wix --version 5.0.2
+wix extension add -g WixToolset.Util.wixext/5.0.2
+.\build-msi.ps1            # publishes, then builds bin\gnip.msi
+```
+
+The MSI installs the service + tray to `C:\Program Files\gnip`, registers the auto-start `gnip`
+service with crash-recovery, creates `C:\ProgramData\gnip` for data, and adds Start Menu shortcuts
+(gnip Tray, gnip Dashboard). Uninstall from Add/Remove Programs — your data in ProgramData is kept.
+
 ## Exposing it
 
 To reach gnip from other machines, bind to all interfaces (`--urls http://0.0.0.0:5099`) and allow

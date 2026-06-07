@@ -12,14 +12,18 @@ dotnet publish (Join-Path $PSScriptRoot "gnip.csproj") `
   -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true `
   -o $out
 
-# The tray app is Windows-only; publish it alongside the service on win-* runtimes.
+# The tray app is Windows-only. Publish it to its OWN folder (two single-file apps can't share
+# one -o dir — the second bundler trips over the first's files), then copy just the exe next to
+# the service.
 if ($Runtime -like "win*") {
   $tray = Join-Path $PSScriptRoot "tray\GnipTray.csproj"
   if (Test-Path $tray) {
+    $trayOut = Join-Path $PSScriptRoot "bin\publish\$Runtime-tray"
     dotnet publish $tray `
       -c Release -r $Runtime --self-contained `
       -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true `
-      -o $out
+      -o $trayOut
+    Copy-Item (Join-Path $trayOut "GnipTray.exe") $out -Force
   }
 }
 
