@@ -48,23 +48,34 @@ gnip.exe --urls http://0.0.0.0:5099 --Gnip:Host=1.1.1.1 --Gnip:LiveWindowSeconds
 ```
 
 Produces `bin\publish\win-x64\` containing `gnip.exe` (self-contained — no .NET install needed on
-the target), plus `wwwroot\` and `appsettings.json`. Copy the whole folder to any Windows x64
-machine and run `gnip.exe`. Data files (`gnip.db`, `gnip.settings.json`) are created next to it.
-For a Linux build (`.\publish.ps1 -Runtime linux-x64`) and full deployment steps, see
-[DEPLOY.md](DEPLOY.md).
+the target), `GnipTray.exe` (the system-tray controller), plus `wwwroot\` and `appsettings.json`.
+Copy the whole folder to any Windows x64 machine and run `gnip.exe`. Data files (`gnip.db`,
+`gnip.settings.json`) are created next to it. For a Linux build
+(`.\publish.ps1 -Runtime linux-x64`) and full deployment steps, see [DEPLOY.md](DEPLOY.md).
 
 ## Run as a Windows Service
 
-The app supports the service lifetime out of the box (running under the SCM sets the working
-directory to the exe's folder automatically). From an **elevated** prompt:
+Easiest — the installer self-elevates, creates the data dir, registers the service with
+crash-recovery, and starts it:
 
 ```powershell
-sc.exe create gnip binPath= "\"C:\gnip\gnip.exe\" --urls http://0.0.0.0:5099 --Gnip:DbPath=C:\ProgramData\gnip\gnip.db" start= auto
-sc.exe start gnip
+.\publish.ps1                  # build gnip.exe + GnipTray.exe into bin\publish\win-x64
+.\install-service.ps1          # install + start the service (localhost:5099)
+.\install-service.ps1 -Url http://0.0.0.0:5099   # ...or expose on the network
+.\install-service.ps1 -Uninstall                 # stop + remove (data is kept)
 ```
 
-Use an **absolute `DbPath` in a writable location** (e.g. `C:\ProgramData\gnip\`) since the install
-folder may be read-only. Remove with `sc.exe delete gnip`.
+Data lives in `C:\ProgramData\gnip\` (writable; the install folder may be read-only). ICMP needs no
+special privilege on Windows, so the default LocalSystem account is fine. The app supports the
+service lifetime out of the box (`UseWindowsService()`), so logs go to the Windows Event Log.
+
+### System-tray controller (optional)
+
+`GnipTray.exe` (published alongside `gnip.exe`) puts a status dot in the tray — green = running,
+grey = stopped, amber = changing, red = not installed. Right-click for **Open dashboard**,
+**Start / Stop / Restart** (these prompt for elevation, since controlling a service needs admin),
+**Open data folder**, **View logs** (Event Viewer), and a **Start tray at login** toggle.
+Double-click the icon to open the dashboard.
 
 ## Exposing it
 

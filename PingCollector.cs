@@ -119,8 +119,10 @@ public sealed class PingCollector : BackgroundService
         // Push to live subscribers even if the DB write failed — the graph should still update.
         _hub.Publish(sample);
 
+        // Per-ping success is Debug (off by default) so a headless/service run doesn't flood
+        // the log; losses/errors stay at Warning, and lifecycle events are Information.
         if (status == ProbeStatus.Success)
-            _log.LogInformation("{Host} rtt={Rtt}ms", s.Host, rtt);
+            _log.LogDebug("{Host} rtt={Rtt}ms", s.Host, rtt);
         else
             _log.LogWarning("{Host} {Status} ({Reply})", s.Host, status, replyStatus);
     }
