@@ -7,7 +7,8 @@
   crash-recovery, keeps data in C:\ProgramData\gnip, and adds Start Menu shortcuts.
 -->
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
-     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util">
+     xmlns:util="http://wixtoolset.org/schemas/v4/wxs/util"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
 
   <Package Name="gnip"
            Manufacturer="gnip"
@@ -18,6 +19,19 @@
 
     <MajorUpgrade DowngradeErrorMessage="A newer version of gnip is already installed." />
     <MediaTemplate EmbedCab="yes" />
+
+    <!-- Setup wizard: Welcome -> License -> Install folder -> Confirm -> Progress -> Finish. -->
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
+
+    <!-- "Launch gnip Tray now" checkbox on the final page (fresh installs only). -->
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOXTEXT" Value="Launch gnip Tray now" />
+    <Property Id="WIXUI_EXITDIALOGOPTIONALCHECKBOX" Value="1" />
+    <CustomAction Id="LaunchTray" FileRef="GnipTray.exe" ExeCommand="" Return="asyncNoWait" Impersonate="yes" />
+    <UI>
+      <Publish Dialog="ExitDialog" Control="Finish" Event="DoAction" Value="LaunchTray"
+               Condition="WIXUI_EXITDIALOGOPTIONALCHECKBOX = 1 and NOT Installed" />
+    </UI>
 
     <!-- C:\Program Files\gnip  (with a wwwroot subfolder) -->
     <StandardDirectory Id="ProgramFiles64Folder">

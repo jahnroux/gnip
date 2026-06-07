@@ -5,8 +5,10 @@
 $ErrorActionPreference = "Stop"
 & (Join-Path $PSScriptRoot "publish.ps1")            # -> bin\publish\win-x64 (service + tray)
 $pub = Join-Path $PSScriptRoot "bin\publish\win-x64"
+$lic = Join-Path $PSScriptRoot "installer\license.rtf"
 $msi = Join-Path $PSScriptRoot "bin\gnip.msi"
 wix build (Join-Path $PSScriptRoot "installer\gnip.wxs") `
-  -arch x64 -ext WixToolset.Util.wixext -d PublishDir=$pub -o $msi
+  -arch x64 -ext WixToolset.Util.wixext -ext WixToolset.UI.wixext `
+  -d PublishDir=$pub -d LicenseRtf=$lic -o $msi
 Write-Host ""
 Write-Host "Built $msi"

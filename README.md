@@ -87,9 +87,11 @@ wix extension add -g WixToolset.Util.wixext/5.0.2
 .\build-msi.ps1            # publishes, then builds bin\gnip.msi
 ```
 
-The MSI installs the service + tray to `C:\Program Files\gnip`, registers the auto-start `gnip`
-service with crash-recovery, creates `C:\ProgramData\gnip` for data, and adds Start Menu shortcuts
-(gnip Tray, gnip Dashboard). Uninstall from Add/Remove Programs — your data in ProgramData is kept.
+Double-clicking `gnip.msi` runs a setup wizard (welcome → license → choose folder → confirm →
+finish, with a **Launch gnip Tray now** option). It installs the service + tray to
+`C:\Program Files\gnip`, registers the auto-start `gnip` service with crash-recovery, creates
+`C:\ProgramData\gnip` for data, and adds Start Menu shortcuts (gnip Tray, gnip Dashboard).
+Uninstall from Add/Remove Programs — your data in ProgramData is kept.
 
 ## Exposing it
 
