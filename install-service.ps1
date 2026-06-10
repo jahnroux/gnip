@@ -87,6 +87,15 @@ try {
     & sc.exe failure $ServiceName reset= 86400 actions= restart/5000/restart/5000/restart/15000 | Out-Null
     if ($LASTEXITCODE -ne 0) { Write-Warning "sc.exe failure returned exit code $LASTEXITCODE; crash-recovery may not be configured." }
 
+    # Register the Windows Event Log source so the service's logging provider finds it instead
+    # of throwing FileNotFoundException trying to create it lazily on the first write.
+    try {
+      if (-not [System.Diagnostics.EventLog]::SourceExists($ServiceName)) {
+        New-EventLog -LogName Application -Source $ServiceName -ErrorAction Stop
+        Write-Host "  Registered Event Log source '$ServiceName'."
+      }
+    } catch { Write-Warning "Could not register Event Log source '$ServiceName': $($_.Exception.Message)" }
+
     Start-Service -Name $ServiceName
 
     Write-Host ""

@@ -12,7 +12,7 @@
 
   <Package Name="gnip"
            Manufacturer="gnip"
-           Version="1.0.0.0"
+           Version="1.0.1.0"
            UpgradeCode="7E3B6A2C-1F4D-4C9E-9B2A-2D6F8C1A4E55"
            Scope="perMachine"
            Compressed="yes">
@@ -55,6 +55,8 @@
       <ComponentGroupRef Id="WwwFiles" />
       <ComponentRef Id="DataFolder" />
       <ComponentRef Id="Shortcuts" />
+      <ComponentRef Id="EventSource" />
+      <ComponentRef Id="TrayAutostart" />
     </Feature>
 
     <!-- Service host + Windows service registration (auto-start, crash-recovery). -->
@@ -117,6 +119,28 @@
                              Target="http://localhost:5099" />
       <RemoveFolder Id="RemoveMenuFolder" On="uninstall" />
       <RegistryValue Root="HKLM" Key="Software\gnip" Name="Shortcuts" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <!-- Register the Windows Event Log source up front. The service's EventLog logging
+         provider otherwise tries to CREATE this source lazily on the first write, and that
+         path threw FileNotFoundException (it killed the collector on the first packet loss).
+         These are the registry values New-EventLog/EventLog.CreateEventSource produce; the
+         message file is the .NET Framework's EventLogMessages.dll, which ships with Windows. -->
+    <Component Id="EventSource" Directory="INSTALLFOLDER" Bitness="always64" Guid="A1B2C3D4-0003-4000-8000-000000000003">
+      <RegistryKey Root="HKLM" Key="SYSTEM\CurrentControlSet\Services\EventLog\Application\gnip"
+                   ForceCreateOnInstall="yes" ForceDeleteOnUninstall="yes">
+        <RegistryValue Type="expandable" Name="EventMessageFile"
+                       Value="%SystemRoot%\Microsoft.NET\Framework64\v4.0.30319\EventLogMessages.dll" KeyPath="yes" />
+        <RegistryValue Type="integer" Name="TypesSupported" Value="7" />
+      </RegistryKey>
+    </Component>
+
+    <!-- Start the tray controller automatically at login (all users); removed on uninstall.
+         Without this the MSI installed the tray but never auto-started it, so the icon only
+         appeared if you manually launched it. -->
+    <Component Id="TrayAutostart" Directory="INSTALLFOLDER" Bitness="always64" Guid="A1B2C3D4-0004-4000-8000-000000000004">
+      <RegistryValue Root="HKLM" Key="Software\Microsoft\Windows\CurrentVersion\Run"
+                     Name="gnip Tray" Type="string" Value="&quot;[INSTALLFOLDER]GnipTray.exe&quot;" KeyPath="yes" />
     </Component>
 
   </Package>

@@ -113,5 +113,15 @@ app.MapGet("/api/live", async (HttpContext ctx, SampleHub hub) =>
 app.MapGet("/api/recent", async (PingStore store, int? limit, HttpContext ctx) =>
     Results.Json(await store.GetRecentAsync(Math.Clamp(limit ?? 50, 1, 1000), ctx.RequestAborted)));
 
-app.Run();
+try
+{
+    app.Run();
+}
+catch (OperationCanceledException)
+{
+    // A Windows Service stop can surface as an OperationCanceledException out of the host's
+    // shutdown path (WindowsServiceLifetime.StopAsync). That's a normal stop, not a crash —
+    // swallow it so the process exits 0 instead of tripping SCM's crash-recovery restart.
+    app.Logger.LogInformation("Host stopped.");
+}
 return 0;
