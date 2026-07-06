@@ -28,3 +28,9 @@ public sealed record SeriesResult(
     double?[] Min,
     double?[] Max,
     double[] Loss);
+
+/// <summary>A WAN-line transition: the active line changed to <see cref="Name"/> at <see cref="Ts"/>.</summary>
+/// <param name="Ts">Unix epoch milliseconds (UTC) of the switch.</param>
+/// <param name="Name">The line that became active (or "Unknown").</param>
+/// <param name="Ip">The detected public egress IP at that time, if known.</param>
+public sealed record LineEvent(long Ts, string Name, string? Ip);

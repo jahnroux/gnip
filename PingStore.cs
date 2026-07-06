@@ -61,6 +61,14 @@ public sealed class PingStore : IAsyncDisposable
                         status    INTEGER NOT NULL
                     );
                     CREATE INDEX IF NOT EXISTS ix_samples_ts ON samples(ts);
+
+                    CREATE TABLE IF NOT EXISTS line_events (
+                        id   INTEGER PRIMARY KEY,
+                        ts   INTEGER NOT NULL,
+                        name TEXT NOT NULL,
+                        ip   TEXT
+                    );
+                    CREATE INDEX IF NOT EXISTS ix_line_events_ts ON line_events(ts);
                     """);
             }
             catch
@@ -191,6 +199,46 @@ public sealed class PingStore : IAsyncDisposable
         }
     }
 
+    /// <summary>Record a WAN-line transition (the active line changed).</summary>
+    public async Task InsertLineEventAsync(long ts, string name, string? ip, CancellationToken ct = default)
+    {
+        if (_writeConn is null)
+            throw new InvalidOperationException("PingStore.InitializeAsync must be called before InsertLineEventAsync.");
+
+        await _writeLock.WaitAsync(ct);
+        try
+        {
+            await _writeConn.ExecuteAsync(
+                "INSERT INTO line_events (ts, name, ip) VALUES (@ts, @name, @ip);",
+                new { ts, name, ip });
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
+    }
+
+    /// <summary>WAN-line transitions within [fromMs, toMs], oldest first.</summary>
+    public async Task<IReadOnlyList<LineEvent>> GetLineEventsAsync(long fromMs, long toMs, CancellationToken ct = default)
+    {
+        await using var conn = new SqliteConnection(_connStr);
+        await conn.OpenAsync(ct);
+        var rows = await conn.QueryAsync<LineEventRow>(
+            "SELECT ts AS Ts, name AS Name, ip AS Ip FROM line_events WHERE ts >= @fromMs AND ts <= @toMs ORDER BY ts ASC;",
+            new { fromMs, toMs });
+        return rows.Select(r => new LineEvent(r.Ts, r.Name, r.Ip)).ToList();
+    }
+
+    /// <summary>The most recent WAN-line transition, or null if none recorded yet.</summary>
+    public async Task<LineEvent?> GetLastLineEventAsync(CancellationToken ct = default)
+    {
+        await using var conn = new SqliteConnection(_connStr);
+        await conn.OpenAsync(ct);
+        var row = await conn.QueryFirstOrDefaultAsync<LineEventRow>(
+            "SELECT ts AS Ts, name AS Name, ip AS Ip FROM line_events ORDER BY ts DESC LIMIT 1;");
+        return row is null ? null : new LineEvent(row.Ts, row.Name, row.Ip);
+    }
+
     /// <summary>Flat row shape for Dapper materialization.</summary>
     private sealed class SampleRow
     {
@@ -208,6 +256,14 @@ public sealed class PingStore : IAsyncDisposable
         public double? Max { get; set; }
         public long Total { get; set; }
         public long Lost { get; set; }
+    }
+
+    /// <summary>Flat row shape for a WAN-line transition.</summary>
+    private sealed class LineEventRow
+    {
+        public long Ts { get; set; }
+        public string Name { get; set; } = "";
+        public string? Ip { get; set; }
     }
 
     public async ValueTask DisposeAsync()

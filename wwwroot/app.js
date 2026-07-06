@@ -21,6 +21,10 @@
   // displayed columnar series: x, avg, min, max, loss-fraction
   let dX = [], dAvg = [], dMin = [], dMax = [], dLoss = [];
 
+  // WAN-line state: failover transitions to mark on the chart, + whether lines are configured.
+  let lineEvents = [];   // [{ x: unix seconds, name }]
+  let lineConfigured = false;
+
   function trimLive() {
     const cutoff = Date.now() / 1000 - liveCapSec;
     let i = 0;
@@ -65,6 +69,25 @@
     c.restore();
   }
 
+  // Vertical dashed markers at WAN-line failover events, labeled with the line switched to.
+  function drawLineEvents(u) {
+    if (!lineEvents.length) return;
+    const c = u.ctx, top = u.bbox.top, h = u.bbox.height;
+    const xmin = u.scales.x.min, xmax = u.scales.x.max;
+    c.save();
+    c.font = "10px system-ui, sans-serif"; c.textBaseline = "top";
+    for (const e of lineEvents) {
+      if (e.x < xmin || e.x > xmax) continue;
+      const px = Math.round(u.valToPos(e.x, "x", true));
+      c.strokeStyle = "rgba(124,160,220,0.85)"; c.lineWidth = 1; c.setLineDash([3, 3]);
+      c.beginPath(); c.moveTo(px, top); c.lineTo(px, top + h); c.stroke();
+      c.setLineDash([]);
+      c.fillStyle = "rgba(170,198,238,0.95)";
+      c.fillText(" → " + e.name, px, top + 2);
+    }
+    c.restore();
+  }
+
   const clear = "rgba(0,0,0,0)";
   const fmtMs = (u, v) => (v == null ? "—" : v.toFixed(0) + " ms");
   const opts = {
@@ -87,7 +110,7 @@
       { stroke: "#6b7686", grid: { stroke: "#1b2230" }, ticks: { stroke: "#1b2230" }, values: (u, t) => t.map((x) => x + " ms") },
     ],
     hooks: {
-      draw: [drawThreshold, drawLoss],
+      draw: [drawThreshold, drawLoss, drawLineEvents],
       setSelect: [(u) => {
         if (u.select.width > 4) {
           const a = u.posToVal(u.select.left, "x");
@@ -136,6 +159,7 @@
       dX = []; dAvg = []; dMin = []; dMax = []; dLoss = [];
     }
     applyData(); updateStats(); updateControls();
+    refreshLineEvents();
   }
 
   async function enterLive() {
@@ -145,6 +169,7 @@
       lxs = []; lys = []; for (const s of w) addSample(s);
     } catch (_) {}
     render();
+    refreshLineEvents();
   }
   function enterHistory(width, end) {
     mode = "history";
@@ -246,6 +271,38 @@
     es.onerror = () => { if (mode === "live") { $("conn").textContent = "reconnecting…"; $("conn").className = "conn down"; } };
   }
   connect();
+
+  // ---- WAN line indicator + failover markers ----
+  async function refreshLine() {
+    let l;
+    try { l = await fetch("/api/line").then((r) => r.json()); } catch (_) { return; }
+    lineConfigured = !!l.configured;
+    const stat = $("line-stat"), el = $("s-line");
+    if (!lineConfigured) { stat.style.display = "none"; return; }
+    stat.style.display = "";
+    const name = l.current || "—";
+    el.textContent = l.lookupOk ? name : name + " ?";
+    let cls = "value linev ";
+    if (!l.lookupOk) cls += "down";
+    else if (!l.current || l.current === "Unknown") cls += "unknown";
+    else if (l.current === l.primary) cls += "primary";
+    else cls += "failover";
+    el.className = cls;
+    el.title = (l.ip || "") + (l.sinceMs ? "  ·  since " + new Date(l.sinceMs).toLocaleString() : "");
+  }
+  async function refreshLineEvents() {
+    if (!lineConfigured) return;
+    const toMs = mode === "live" ? Date.now() : endMs;
+    const fromMs = toMs - widthSec * 1000;
+    try {
+      const evs = await fetch(`/api/line/events?from=${fromMs}&to=${toMs}`).then((r) => r.json());
+      lineEvents = evs.map((e) => ({ x: e.ts / 1000, name: e.name }));
+      chart.redraw();
+    } catch (_) {}
+  }
+  await refreshLine();
+  await refreshLineEvents();
+  setInterval(async () => { await refreshLine(); await refreshLineEvents(); }, 5000);
 
   // ---- settings panel ----
   function applyConfig(c) {

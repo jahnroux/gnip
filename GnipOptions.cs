@@ -25,4 +25,23 @@ public sealed class GnipOptions
 
     /// <summary>Latency threshold (ms) drawn as a reference line on the graph.</summary>
     public int HighLatencyMs { get; set; } = 100;
+
+    /// <summary>
+    /// WAN lines for failover detection (empty = feature off). Order matters: the first entry is
+    /// treated as the primary line. The active line is detected by matching this host's public
+    /// egress IP against each line's CIDR.
+    /// </summary>
+    public List<LineConfig> Lines { get; set; } = [];
+
+    /// <summary>Seconds between public-egress-IP checks used to detect the active WAN line.</summary>
+    public int LineCheckSeconds { get; set; } = 15;
+}
+
+/// <summary>One WAN line: a display name and the public IP/CIDR its traffic egresses from.</summary>
+public sealed class LineConfig
+{
+    public string? Name { get; set; }
+
+    /// <summary>Public IPv4 or CIDR, e.g. "203.0.113.5/32" (single IP) or "41.164.173.112/30".</summary>
+    public string? Ip { get; set; }
 }

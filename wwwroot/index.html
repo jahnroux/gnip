@@ -47,6 +47,12 @@
     .conn.down { color: #ef5350; }
     .conn.hist { color: #b0a44f; }
     .conn::before { content: "\25CF\00a0"; }
+    .linev { font-variant-numeric: tabular-nums; }
+    .linev::before { content: "\25CF\00a0"; }
+    .linev.primary { color: #66bb6a; }
+    .linev.failover { color: #ffa726; }
+    .linev.unknown { color: #8b94a3; }
+    .linev.down { color: #ef5350; }
   </style>
 </head>
 <body>
@@ -59,6 +65,7 @@
       <div class="stat"><span class="label">Max</span><span class="value" id="s-max">&mdash;</span></div>
       <div class="stat"><span class="label">Loss</span><span class="value" id="s-loss">&mdash;</span></div>
       <div class="stat"><span class="label">Window</span><span class="value" id="s-win">&mdash;</span></div>
+      <div class="stat" id="line-stat" style="display:none"><span class="label">Line</span><span class="value linev" id="s-line">&mdash;</span></div>
       <div class="stat"><span class="label">Stream</span><span class="conn down" id="conn">connecting</span></div>
     </div>
   </header>

@@ -21,8 +21,10 @@ builder.Services.AddOptions<GnipOptions>()
 builder.Services.AddSingleton<PingStore>();
 builder.Services.AddSingleton<GnipSettings>();
 builder.Services.AddSingleton<SampleHub>();
+builder.Services.AddSingleton<LineState>();
 builder.Services.AddHostedService<PingCollector>();
 builder.Services.AddHostedService<RetentionService>();
+builder.Services.AddHostedService<LineMonitor>();
 
 var app = builder.Build();
 
@@ -112,6 +114,32 @@ app.MapGet("/api/live", async (HttpContext ctx, SampleHub hub) =>
 // Debug endpoint: most recent samples, newest first.
 app.MapGet("/api/recent", async (PingStore store, int? limit, HttpContext ctx) =>
     Results.Json(await store.GetRecentAsync(Math.Clamp(limit ?? 50, 1, 1000), ctx.RequestAborted)));
+
+// Currently-active WAN line (egress-IP detection). `configured` is false when no lines are set.
+app.MapGet("/api/line", (LineState lineState, IOptions<GnipOptions> opts) =>
+{
+    var s = lineState.Current;
+    var lines = opts.Value.Lines;
+    return Results.Json(new
+    {
+        configured = s.Configured,
+        current = s.Name,
+        ip = s.Ip,
+        sinceMs = s.SinceMs,
+        lookupOk = s.LookupOk,
+        primary = lines.Count > 0 ? lines[0].Name : null,
+        lines = lines.Select(l => new { name = l.Name, ip = l.Ip }),
+    });
+});
+
+// WAN-line transitions within a range, for drawing failover markers on the chart.
+app.MapGet("/api/line/events", async (PingStore store, GnipSettings settings, long? from, long? to, HttpContext ctx) =>
+{
+    var nowMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+    var toMs = to ?? nowMs;
+    var fromMs = from ?? (toMs - (long)settings.Current.LiveWindowSeconds * 1000);
+    return Results.Json(await store.GetLineEventsAsync(fromMs, toMs, ctx.RequestAborted));
+});
 
 try
 {

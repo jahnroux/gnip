@@ -15,6 +15,7 @@ param(
     [string]$NewExe      = (Join-Path $PSScriptRoot "bin\publish\win-x64\gnip.exe"),
     [string]$InstallDir  = "C:\Program Files\gnip",
     [string]$Url         = "http://localhost:5099",
+    [string]$AppSettings = "",   # optional: install this appsettings.json into the service folder (elevated)
     [switch]$Relaunched
 )
 $ErrorActionPreference = "Stop"
@@ -30,7 +31,8 @@ if (-not (Test-Admin)) {
     $argList = @(
         "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$PSCommandPath`"",
         "-ServiceName", "`"$ServiceName`"", "-NewExe", "`"$NewExe`"",
-        "-InstallDir", "`"$InstallDir`"", "-Url", "`"$Url`"", "-Relaunched"
+        "-InstallDir", "`"$InstallDir`"", "-Url", "`"$Url`"",
+        "-AppSettings", "`"$AppSettings`"", "-Relaunched"
     )
     try {
         $p = Start-Process powershell -Verb RunAs -ArgumentList $argList -Wait -PassThru
@@ -84,6 +86,30 @@ for ($i = 0; $i -lt 10; $i++) {
 }
 if (-not $copied) { Fail "Could not replace $target (still locked by a running process)." }
 Write-Host "  binary replaced." -ForegroundColor Green
+
+# Sync the web UI assets so the served dashboard matches the new binary.
+$srcWww = Join-Path (Split-Path $NewExe) "wwwroot"
+$dstWww = Join-Path $InstallDir "wwwroot"
+if (Test-Path $srcWww) {
+    try {
+        if (-not (Test-Path $dstWww)) { New-Item -ItemType Directory -Force $dstWww | Out-Null }
+        Copy-Item -Path (Join-Path $srcWww '*') -Destination $dstWww -Recurse -Force -ErrorAction Stop
+        Write-Host "  web UI (wwwroot) updated." -ForegroundColor Green
+    } catch { Write-Host "  (could not update wwwroot: $($_.Exception.Message))" -ForegroundColor Yellow }
+}
+
+# Optionally install a prepared appsettings.json (elevated, so it can write under Program Files).
+# Otherwise the existing one is left untouched. Validated as JSON first, since bad config would
+# stop the service from starting (config is checked on boot).
+if ($AppSettings) {
+    if (-not (Test-Path $AppSettings)) { Fail "AppSettings file not found: $AppSettings" }
+    try { Get-Content $AppSettings -Raw | ConvertFrom-Json -ErrorAction Stop | Out-Null }
+    catch { Fail "AppSettings is not valid JSON ($AppSettings): $($_.Exception.Message)" }
+    try {
+        Copy-Item -LiteralPath $AppSettings -Destination (Join-Path $InstallDir "appsettings.json") -Force -ErrorAction Stop
+        Write-Host "  appsettings.json installed from $AppSettings." -ForegroundColor Green
+    } catch { Fail "Could not install appsettings.json: $($_.Exception.Message)" }
+}
 
 # Ensure the Windows Event Log source exists. The service's EventLog logging provider lazily
 # tries to CREATE this source on first write; under the service that creation path threw
