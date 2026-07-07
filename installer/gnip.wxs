@@ -12,7 +12,7 @@
 
   <Package Name="gnip"
            Manufacturer="gnip"
-           Version="1.0.1.0"
+           Version="1.1.0.0"
            UpgradeCode="7E3B6A2C-1F4D-4C9E-9B2A-2D6F8C1A4E55"
            Scope="perMachine"
            Compressed="yes">

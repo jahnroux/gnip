@@ -2,6 +2,10 @@
 bin/
 obj/
 
+# Distributable installers staged by scripts\release.ps1 (~100 MB each; distribute via
+# GitHub Releases or a direct handoff, not committed to git). The folder's README is kept.
+releases/*.msi
+
 # SQLite data + WAL sidecars
 *.db
 *.db-wal
