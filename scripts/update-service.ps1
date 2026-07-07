@@ -12,7 +12,7 @@
 [CmdletBinding()]
 param(
     [string]$ServiceName = "gnip",
-    [string]$NewExe      = (Join-Path $PSScriptRoot "bin\publish\win-x64\gnip.exe"),
+    [string]$NewExe      = (Join-Path (Split-Path $PSScriptRoot -Parent) "bin\publish\win-x64\gnip.exe"),
     [string]$InstallDir  = "C:\Program Files\gnip",
     [string]$Url         = "http://localhost:5099",
     [string]$AppSettings = "",   # optional: install this appsettings.json into the service folder (elevated)

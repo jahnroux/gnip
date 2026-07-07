@@ -10,7 +10,7 @@
 #>
 param(
   [string]$ServiceName = "gnip",
-  [string]$BinPath = (Join-Path $PSScriptRoot "bin\publish\win-x64\gnip.exe"),
+  [string]$BinPath = (Join-Path (Split-Path $PSScriptRoot -Parent) "bin\publish\win-x64\gnip.exe"),
   [string]$DataDir = "C:\ProgramData\gnip",
   [string]$Url = "http://localhost:5099",
   [switch]$Uninstall,

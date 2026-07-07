@@ -12,7 +12,7 @@ service. gnip is a single self-contained binary — no .NET install needed on th
 ### Run from source (development)
 
 ```powershell
-dotnet run -c Release --urls http://localhost:5099
+dotnet run --project src -c Release --urls http://localhost:5099
 ```
 
 Open **http://localhost:5099**. Change the target/interval/etc. live from the ⚙ Settings panel.
@@ -20,13 +20,13 @@ Open **http://localhost:5099**. Change the target/interval/etc. live from the �
 ### Run a portable build (no SDK needed)
 
 ```powershell
-.\publish.ps1                       # -> bin\publish\win-x64\
+.\scripts\publish.ps1                       # -> bin\publish\win-x64\
 .\bin\publish\win-x64\gnip.exe --urls http://localhost:5099
 ```
 
 `bin\publish\win-x64\` holds `gnip.exe` + `wwwroot\` + `appsettings.json`. Copy that folder
 anywhere and run it. Data files (`gnip.db`, `gnip.settings.json`) are created next to the exe.
-To install it as a Windows Service, see [README.md](README.md#run-as-a-windows-service).
+To install it as a Windows Service, see [README.md](../README.md#run-as-a-windows-service).
 
 ---
 
@@ -40,10 +40,10 @@ publish `linux-musl-x64` instead.
 On your Windows dev box (cross-publish works fine):
 
 ```powershell
-.\publish.ps1 -Runtime linux-x64    # -> bin\publish\linux-x64\  (gnip, wwwroot\, appsettings.json)
+.\scripts\publish.ps1 -Runtime linux-x64    # -> bin\publish\linux-x64\  (gnip, wwwroot\, appsettings.json)
 ```
 
-*(Or, if the server has the .NET 8 SDK, build there: `dotnet publish -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o out`.)*
+*(Or, if the server has the .NET 8 SDK, build there: `dotnet publish src/gnip.csproj -c Release -r linux-x64 --self-contained -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o out`.)*
 
 ### Step 2 — Copy it to the server
 

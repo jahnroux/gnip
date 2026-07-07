@@ -3,7 +3,7 @@
   restarts the service to restore monitoring. Self-elevates.
 
   Run from the repo root:
-    .\capture-dump.ps1
+    .\scripts\capture-dump.ps1
 
   The dump is written to C:\tmp\sqlitetest\gnip-frozen.dmp. After it's captured,
   the service is restarted so collection resumes.

@@ -2,7 +2,14 @@ using System.Text.Json;
 using Gnip;
 using Microsoft.Extensions.Options;
 
-var builder = WebApplication.CreateBuilder(args);
+// Anchor the content root to the executable's own directory rather than the current working
+// directory, so wwwroot / appsettings.json / a relative DbPath resolve next to the exe no matter
+// where it's launched from (as a service, xcopy-deployed, or run from another folder).
+var builder = WebApplication.CreateBuilder(new WebApplicationOptions
+{
+    Args = args,
+    ContentRootPath = AppContext.BaseDirectory,
+});
 
 // Integrate with the host's service manager when launched by it; both are no-ops otherwise.
 builder.Host.UseWindowsService(); // Windows SCM

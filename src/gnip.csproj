@@ -4,8 +4,6 @@
     <TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <!-- The tray app is a separate project living in a subfolder; keep its sources out of this one. -->
-    <DefaultItemExcludes>$(DefaultItemExcludes);tray\**;installer\**;bin\publish\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
