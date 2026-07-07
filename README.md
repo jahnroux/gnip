@@ -141,4 +141,13 @@ network, or put it behind a reverse proxy / VPN.
 | `GET /api/live` | Server-Sent Events stream of new samples |
 | `GET /api/recent?limit=` | Most recent raw samples (debug) |
 | `GET /api/line` · `GET /api/line/events` | Active WAN line + failover history (when `Lines` configured) |
+
+## License
+
+gnip is **source-available** and **free for non-commercial use**, under the
+[PolyForm Noncommercial License 1.0.0](LICENSE): you may use, modify, and share it for any
+noncommercial purpose. **Commercial use requires a separate license** from the author (Jahn Roux).
+
+(This is a source-available *noncommercial* license — not an OSI "open source" license, since those
+can't restrict commercial use.)
 ```
