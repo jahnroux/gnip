@@ -31,6 +31,10 @@ public sealed class GnipOptions
     /// treated as the primary line. The active line is detected by matching this host's public
     /// egress IP against each line's CIDR.
     /// </summary>
+    /// <remarks>
+    /// This is the seed only. The live list is held by <see cref="GnipSettings"/>, persisted to
+    /// gnip.settings.json beside the database, and editable from the settings UI.
+    /// </remarks>
     public List<LineConfig> Lines { get; set; } = [];
 
     /// <summary>Seconds between public-egress-IP checks used to detect the active WAN line.</summary>

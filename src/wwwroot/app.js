@@ -24,6 +24,7 @@
   // WAN-line state: failover transitions to mark on the chart, + whether lines are configured.
   let lineEvents = [];   // [{ x: unix seconds, name }]
   let lineConfigured = false;
+  let lineInfo = null;   // last /api/line payload, so the settings panel can offer the detected IP
 
   function trimLive() {
     const cutoff = Date.now() / 1000 - liveCapSec;
@@ -277,6 +278,7 @@
     let l;
     try { l = await fetch("/api/line").then((r) => r.json()); } catch (_) { return; }
     lineConfigured = !!l.configured;
+    lineInfo = l;
     const stat = $("line-stat"), el = $("s-line");
     if (!lineConfigured) { stat.style.display = "none"; return; }
     stat.style.display = "";
@@ -305,6 +307,84 @@
   setInterval(async () => { await refreshLine(); await refreshLineEvents(); }, 5000);
 
   // ---- settings panel ----
+
+  // WAN line rows are edited in a working copy, so reordering or removing a row never discards
+  // whatever the neighbouring rows are mid-edit. Committed to the server only on Save.
+  let lineRows = [];
+  const MAX_LINES = 16; // mirrors GnipSettings.MaxLines
+
+  function mkRowBtn(cls, label, title, disabled, onClick) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = cls;
+    b.textContent = label;
+    b.title = title;
+    b.disabled = disabled;
+    b.addEventListener("click", onClick);
+    return b;
+  }
+
+  function renderLineRows() {
+    const wrap = $("f-lines");
+    wrap.innerHTML = "";
+    if (!lineRows.length) {
+      const p = document.createElement("p");
+      p.className = "hint";
+      p.textContent = "No lines configured - detection is off.";
+      wrap.appendChild(p);
+      return;
+    }
+    lineRows.forEach((row, i) => {
+      const div = document.createElement("div");
+      div.className = "line-row";
+
+      const name = document.createElement("input");
+      name.className = "ln-name";
+      name.placeholder = i === 0 ? "Name (primary)" : "Name";
+      name.value = row.name;
+      name.addEventListener("input", () => { row.name = name.value; });
+
+      const ip = document.createElement("input");
+      ip.className = "ln-ip";
+      ip.placeholder = "IP or CIDR";
+      ip.value = row.ip;
+      ip.addEventListener("input", () => { row.ip = ip.value; });
+
+      div.append(
+        name, ip,
+        mkRowBtn("ln-up", "\u25B2", "Move up", i === 0, () => swapLineRows(i, i - 1)),
+        mkRowBtn("ln-dn", "\u25BC", "Move down", i === lineRows.length - 1, () => swapLineRows(i, i + 1)),
+        mkRowBtn("ln-rm", "\u2715", "Remove", false, () => { lineRows.splice(i, 1); renderLineRows(); }),
+      );
+      wrap.appendChild(div);
+    });
+  }
+
+  function swapLineRows(a, b) {
+    const t = lineRows[a];
+    lineRows[a] = lineRows[b];
+    lineRows[b] = t;
+    renderLineRows();
+  }
+
+  function addLineRow(ip) {
+    if (lineRows.length >= MAX_LINES) return;
+    lineRows.push({ name: "", ip: ip || "" });
+    renderLineRows();
+    // Land the caret on the name field of the row just added.
+    const rows = $("f-lines").querySelectorAll(".line-row");
+    const last = rows[rows.length - 1];
+    if (last) last.querySelector(".ln-name").focus();
+  }
+
+  // Offer the egress IP gnip is actually seeing - the common case for adding a line is that a
+  // new one just showed up as "Unknown", and retyping the address by hand invites a typo.
+  function syncDetectedIpButton() {
+    const btn = $("f-line-detected");
+    const ip = lineInfo && lineInfo.ip;
+    btn.disabled = !ip;
+    btn.textContent = ip ? "+ Add detected IP (" + ip + ")" : "+ Add detected IP";
+  }
   function applyConfig(c) {
     cfg = c;
     liveWindowSec = c.liveWindowSeconds;
@@ -319,6 +399,10 @@
     $("f-window").value = cfg.liveWindowSeconds;
     $("f-threshold").value = cfg.highLatencyMs;
     $("f-retention").value = cfg.retentionHours;
+    lineRows = (cfg.lines || []).map((l) => ({ name: l.name || "", ip: l.ip || "" }));
+    renderLineRows();
+    syncDetectedIpButton();
+    $("f-linecheck").value = cfg.lineCheckSeconds;
     const m = $("f-msg"); m.textContent = ""; m.className = "";
     $("settings").classList.remove("hidden");
   }
@@ -331,6 +415,9 @@
       liveWindowSeconds: Number($("f-window").value),
       highLatencyMs: Number($("f-threshold").value),
       retentionHours: Number($("f-retention").value),
+      lineCheckSeconds: Number($("f-linecheck").value),
+      // Drop rows left entirely blank; a half-filled row is sent so the server can explain why.
+      lines: lineRows.map((r) => ({ name: r.name.trim(), ip: r.ip.trim() })).filter((r) => r.name || r.ip),
     };
     const msg = $("f-msg");
     try {
@@ -341,6 +428,8 @@
         return;
       }
       applyConfig(await res.json());
+      await refreshLine();        // a line edit can change the badge immediately
+      await refreshLineEvents();
       if (mode === "live") await enterLive(); else render();
       closeSettings();
     } catch (_) {
@@ -350,6 +439,8 @@
   $("settings-btn").addEventListener("click", openSettings);
   $("f-save").addEventListener("click", saveSettings);
   $("f-cancel").addEventListener("click", closeSettings);
+  $("f-line-add").addEventListener("click", () => addLineRow(""));
+  $("f-line-detected").addEventListener("click", () => { if (lineInfo && lineInfo.ip) addLineRow(lineInfo.ip + "/32"); });
 
   function fmtDuration(sec) {
     if (sec % 86400 === 0) return sec / 86400 + "d";

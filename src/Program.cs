@@ -1,5 +1,7 @@
+using System.Reflection;
 using System.Text.Json;
 using Gnip;
+using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Options;
 
 // Anchor the content root to the executable's own directory rather than the current working
@@ -14,6 +16,11 @@ var builder = WebApplication.CreateBuilder(new WebApplicationOptions
 // Integrate with the host's service manager when launched by it; both are no-ops otherwise.
 builder.Host.UseWindowsService(); // Windows SCM
 builder.Host.UseSystemd();        // Linux systemd (Type=notify + journald logging)
+
+// Portable default: with no --urls / ASPNETCORE_URLS given, listen on the documented port rather
+// than the framework default of :5000, so a bare gnip.exe comes up where the docs and tray expect.
+if (string.IsNullOrWhiteSpace(builder.Configuration["urls"]))
+    builder.WebHost.UseUrls("http://localhost:5099");
 
 builder.Services.AddOptions<GnipOptions>()
     .Bind(builder.Configuration.GetSection(GnipOptions.SectionName))
@@ -48,6 +55,14 @@ catch (OptionsValidationException ex)
     return 1;
 }
 
+// Serve the UI from wwwroot on disk when it is there (so it can be tweaked without a rebuild),
+// falling back to the copy embedded in the assembly -- which is what makes a lone gnip.exe work.
+var embeddedUi = new ManifestEmbeddedFileProvider(Assembly.GetExecutingAssembly(), "wwwroot");
+var physicalWebRoot = app.Environment.WebRootPath;
+app.Environment.WebRootFileProvider = !string.IsNullOrEmpty(physicalWebRoot) && Directory.Exists(physicalWebRoot)
+    ? new CompositeFileProvider(new PhysicalFileProvider(physicalWebRoot), embeddedUi)
+    : embeddedUi;
+
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
@@ -60,6 +75,8 @@ static object ConfigDto(GnipSettings.Snapshot s) => new
     liveWindowSeconds = s.LiveWindowSeconds,
     highLatencyMs = s.HighLatencyMs,
     retentionHours = s.RetentionHours,
+    lineCheckSeconds = s.LineCheckSeconds,
+    lines = s.Lines.Select(l => new { name = l.Name, ip = l.Ip }),
 };
 
 // Current settings for the frontend.
@@ -123,10 +140,10 @@ app.MapGet("/api/recent", async (PingStore store, int? limit, HttpContext ctx) =
     Results.Json(await store.GetRecentAsync(Math.Clamp(limit ?? 50, 1, 1000), ctx.RequestAborted)));
 
 // Currently-active WAN line (egress-IP detection). `configured` is false when no lines are set.
-app.MapGet("/api/line", (LineState lineState, IOptions<GnipOptions> opts) =>
+app.MapGet("/api/line", (LineState lineState, GnipSettings settings) =>
 {
     var s = lineState.Current;
-    var lines = opts.Value.Lines;
+    var lines = settings.Current.Lines;
     return Results.Json(new
     {
         configured = s.Configured,

@@ -31,7 +31,7 @@
     #controls button.active { background: #1f6feb; border-color: #1f6feb; color: #fff; }
     #controls button:disabled { opacity: .4; cursor: default; }
     #range-label { font-size: 12px; color: #8b94a3; font-variant-numeric: tabular-nums; margin-left: 4px; }
-    #settings { position: fixed; top: 0; right: 0; width: 320px; height: 100%; background: #11151c; border-left: 1px solid #1e2530; padding: 18px; z-index: 10; box-shadow: -8px 0 24px rgba(0,0,0,.45); overflow: auto; }
+    #settings { position: fixed; top: 0; right: 0; width: 400px; height: 100%; background: #11151c; border-left: 1px solid #1e2530; padding: 18px; z-index: 10; box-shadow: -8px 0 24px rgba(0,0,0,.45); overflow: auto; }
     #settings.hidden { display: none; }
     #settings h3 { margin: 0 0 4px; font-size: 14px; }
     #settings label { display: block; font-size: 12px; color: #9aa4b2; margin: 12px 0; }
@@ -41,6 +41,19 @@
     #settings .actions button#f-cancel { background: #1a212c; border-color: #283143; color: #c8d0da; }
     #f-msg { font-size: 12px; color: #66bb6a; }
     #f-msg.err { color: #ef5350; }
+    #settings h4 { margin: 20px 0 2px; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: #8b94a3; }
+    #settings .hint { margin: 4px 0 8px; font-size: 11px; color: #6b7686; line-height: 1.4; }
+    #f-lines { margin-bottom: 8px; }
+    .line-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) auto auto auto; gap: 4px; margin-bottom: 5px; align-items: center; }
+    .line-row input { display: block; width: 100%; min-width: 0; margin: 0; background: #0e1116; border: 1px solid #283143; color: #d8dee9; border-radius: 4px; padding: 5px 6px; font: inherit; font-size: 12px; }
+    .line-row button { background: #1a212c; color: #8b94a3; border: 1px solid #283143; border-radius: 4px; padding: 4px 5px; font-size: 10px; line-height: 1; cursor: pointer; }
+    .line-row button:hover:not(:disabled) { background: #222b38; color: #d8dee9; }
+    .line-row button:disabled { opacity: .3; cursor: default; }
+    .line-row .ln-rm:hover { color: #ef5350; border-color: #ef5350; }
+    .line-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+    .line-btns button { background: #1a212c; color: #c8d0da; border: 1px solid #283143; border-radius: 4px; padding: 5px 9px; font: inherit; font-size: 11px; cursor: pointer; }
+    .line-btns button:hover:not(:disabled) { background: #222b38; }
+    .line-btns button:disabled { opacity: .4; cursor: default; }
     #chart { padding: 14px 8px; }
     .conn { font-size: 13px; }
     .conn.live { color: #66bb6a; }
@@ -93,6 +106,14 @@
     <label>Live window (seconds) <input id="f-window" type="number" min="5" /></label>
     <label>High-latency threshold (ms) <input id="f-threshold" type="number" min="1" /></label>
     <label>Retention (hours) <input id="f-retention" type="number" min="1" /></label>
+    <h4>WAN lines</h4>
+    <p class="hint">Matched against the public egress IP this host is currently using. Order sets priority &mdash; row 1 is the primary line. Remove every row to turn line detection off.</p>
+    <div id="f-lines"></div>
+    <div class="line-btns">
+      <button id="f-line-add" type="button">+ Add line</button>
+      <button id="f-line-detected" type="button" title="Add a row prefilled with the egress IP gnip currently sees">+ Add detected IP</button>
+    </div>
+    <label>Line check interval (seconds) <input id="f-linecheck" type="number" min="5" /></label>
     <div class="actions">
       <button id="f-save">Save</button>
       <button id="f-cancel">Cancel</button>

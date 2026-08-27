@@ -37,12 +37,12 @@ Defaults live in [appsettings.json](src/appsettings.json) under the `Gnip` secti
 | `RetentionHours` | `48` | Samples older than this are pruned every 5 minutes |
 | `LiveWindowSeconds` | `600` | Width of the live rolling window |
 | `HighLatencyMs` | `100` | Threshold reference line on the graph |
-| `Lines` | `[]` | WAN lines for failover detection (see below); empty = off |
+| `Lines` | `[]` | Seed for WAN failover detection (see below); empty = off |
 | `LineCheckSeconds` | `15` | How often to check the active WAN line |
 
-You can change the core settings **at runtime** from the **⚙ Settings** panel in the UI
+You can change **every** setting above **at runtime** from the **⚙ Settings** panel in the UI
 (or `PUT /api/config`). Runtime changes are persisted to `gnip.settings.json` (next to the DB) and
-applied immediately — the collector re-points without a restart.
+applied immediately — the collector re-points and the WAN line monitor reloads its line list, both without a restart.
 
 **Precedence:** `gnip.settings.json` (your runtime changes) overrides `appsettings.json` *and* any
 `--Gnip:*` command-line values for the fields it contains. Delete that file to fall back to them.
@@ -57,7 +57,15 @@ gnip.exe --urls http://0.0.0.0:5099 --Gnip:Host=1.1.1.1 --Gnip:LiveWindowSeconds
 
 If you have multiple internet lines behind an auto-failover firewall, configure them and gnip shows
 which one is currently carrying traffic (by matching your public egress IP to each line's CIDR), with
-failover markers on the chart. Add to the `Gnip` section:
+failover markers on the chart.
+
+Add, reorder and remove lines in the **⚙ Settings** panel — **+ Add detected IP** prefills the
+address gnip is currently egressing from, which is usually why you are adding a line in the first
+place. Changes apply live (no restart) and persist to `gnip.settings.json` beside the database, so
+on a service install you never have to edit a file under Program Files. Row 1 is the primary line.
+
+To ship a default set instead, seed the `Gnip` section — these are only the initial values, and the
+UI takes over once you save:
 
 ```json
 "Lines": [
@@ -81,6 +89,22 @@ the target), `GnipTray.exe` (the system-tray controller), plus `wwwroot\` and `a
 Copy the whole folder to any Windows x64 machine and run `gnip.exe`. Data files (`gnip.db`,
 `gnip.settings.json`) are created next to it. For a Linux build
 (`.\scripts\publish.ps1 -Runtime linux-x64`) and full deployment steps, see [DEPLOY.md](docs/DEPLOY.md).
+
+### Truly portable: just the exe
+
+You do not even need the folder — `wwwroot` is embedded in the assembly, so a lone `gnip.exe` copied
+anywhere runs with no sibling files at all:
+
+```powershell
+.\gnip.exe                              # listens on http://localhost:5099
+.\gnip.exe --urls http://0.0.0.0:8080   # or pick your own
+```
+
+It needs no `appsettings.json` (built-in defaults apply), and everything — target host, thresholds,
+WAN lines — is configurable from the **⚙ Settings** panel. No install, no admin, no .NET runtime.
+
+If a `wwwroot\` folder *is* present next to the exe it wins over the embedded copy, so you can still
+tweak the UI without a rebuild.
 
 ## Run as a Windows Service
 
