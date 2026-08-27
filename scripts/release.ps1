@@ -27,6 +27,15 @@ New-Item -ItemType Directory -Force $releases | Out-Null
 $dest = Join-Path $releases "gnip-$display.msi"
 Copy-Item (Join-Path $root "bin\gnip.msi") $dest -Force
 
+# Stage the portable single-file exe too. wwwroot is embedded in the assembly, so this one file
+# is the whole app: no install, no admin, no sibling files. (build-msi.ps1 already published it.)
+$portable = Join-Path $releases "gnip-$display-portable.exe"
+Copy-Item (Join-Path $root "bin\publish\win-x64\gnip.exe") $portable -Force
+
 Write-Host ""
-Write-Host ("Release staged: {0}  ({1:N1} MB)" -f $dest, ((Get-Item $dest).Length / 1MB)) -ForegroundColor Green
-Write-Host "Distribute via GitHub Releases:  gh release create v$display `"$dest`"" -ForegroundColor DarkGray
+Write-Host "Release $display staged:" -ForegroundColor Green
+Write-Host ("  installer : {0}  ({1:N1} MB)" -f $dest,     ((Get-Item $dest).Length     / 1MB)) -ForegroundColor Green
+Write-Host ("  portable  : {0}  ({1:N1} MB)" -f $portable, ((Get-Item $portable).Length / 1MB)) -ForegroundColor Green
+Write-Host ""
+Write-Host "Publish both via GitHub Releases:" -ForegroundColor DarkGray
+Write-Host "  gh release create v$display `"$dest`" `"$portable`" --title `"gnip $display`" --notes `"...`"" -ForegroundColor DarkGray
